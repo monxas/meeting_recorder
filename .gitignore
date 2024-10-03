@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+recordings/
+transcripts/
+notes/
+lib/
+bin/
+include/
+share/
