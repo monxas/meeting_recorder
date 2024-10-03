@@ -303,7 +303,8 @@ function displaySummary(notesFile) {
         })
         .then(text => {
             console.log('Summary fetched successfully for notes file:', notesFile);
-            summaryContent.innerHTML = `<pre>${escapeHtml(text)}</pre>`;
+            const htmlContent = marked.parse(text);
+            summaryContent.innerHTML = `<div>${htmlContent}</div>`;
         })
         .catch(error => {
             console.error('Error fetching summary:', error);
