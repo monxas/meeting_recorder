@@ -126,6 +126,30 @@ header {
   outline: none;
 }
 
+/* Style for transcript and notes */
+.transcript, .notes {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #f1f1f1;
+    border-left: 4px solid #4CAF50;
+    border-radius: 4px;
+}
+
+.transcript strong, .notes strong {
+    color: #333;
+}
+
+.transcript a, .notes a {
+    display: inline-block;
+    margin-top: 5px;
+    color: #007BFF;
+    text-decoration: none;
+}
+
+.transcript a:hover, .notes a:hover {
+    text-decoration: underline;
+}
+
 @media (max-width: 768px) {
   .main-content {
     flex-direction: column;

@@ -1,20 +1,17 @@
-# transcribe_audio.py
+# backend/transcribe_audio.py
 
 import whisper
 import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+from pathlib import Path
 
 # Configuration
-OUTPUT_DIR = "recordings"
-TRANSCRIPT_DIR = "transcripts"
+OUTPUT_DIR = Path(__file__).resolve().parent.parent / "recordings"
+TRANSCRIPT_DIR = Path(__file__).resolve().parent.parent / "transcripts"
 
 def transcribe_audio(file_path):
     model = whisper.load_model("base")  # You can choose other models like "small", "medium", "large"
     print(f"Transcribing {file_path}...")
-    result = model.transcribe(file_path)
+    result = model.transcribe(str(file_path))
     transcript = result["text"]
     return transcript
 
@@ -23,20 +20,18 @@ def save_transcript(transcript, output_path):
         f.write(transcript)
     print(f"Transcript saved to {output_path}")
 
-def main():
-    if not os.path.exists(TRANSCRIPT_DIR):
-        os.makedirs(TRANSCRIPT_DIR)
+def process_latest_audio():
+    if not TRANSCRIPT_DIR.exists():
+        TRANSCRIPT_DIR.mkdir(parents=True)
     
     # Find the latest audio file
-    audio_files = sorted([f for f in os.listdir(OUTPUT_DIR) if f.endswith('.wav')], reverse=True)
+    audio_files = sorted([f for f in OUTPUT_DIR.iterdir() if f.suffix == '.wav'], key=lambda x: x.stat().st_mtime, reverse=True)
     if not audio_files:
         print("No audio files found in recordings directory.")
-        return
+        return None, None
     
-    latest_audio = os.path.join(OUTPUT_DIR, audio_files[0])
+    latest_audio = audio_files[0]
     transcript = transcribe_audio(latest_audio)
-    transcript_file = os.path.join(TRANSCRIPT_DIR, f"{os.path.splitext(audio_files[0])[0]}_transcript.txt")
+    transcript_file = TRANSCRIPT_DIR / f"{latest_audio.stem}_transcript.txt"
     save_transcript(transcript, transcript_file)
-
-if __name__ == "__main__":
-    main()
+    return latest_audio.name, transcript_file.name

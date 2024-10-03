@@ -203,7 +203,7 @@ function fetchRecordings() {
         });
 }
 
-// Populate the recordings list with audio players
+// Populate the recordings list with summaries
 function populateRecordings(recordings) {
     // Clear existing list
     summariesList.innerHTML = '';
@@ -218,10 +218,10 @@ function populateRecordings(recordings) {
     // Sort recordings by timestamp descending (newest first)
     recordings.sort((a, b) => {
         const getTimestamp = filename => {
-            const match = filename.match(/meeting_audio_(\d{8}_\d{6})\.wav/);
+            const match = filename.audio_file.match(/meeting_audio_(\d{8}_\d{6})\.wav/);
             return match ? match[1] : '';
         };
-        return getTimestamp(b).localeCompare(getTimestamp(a));
+        return getTimestamp(b.audio_file).localeCompare(getTimestamp(a.audio_file));
     });
 
     recordings.forEach(recording => {
@@ -229,14 +229,27 @@ function populateRecordings(recordings) {
 
         const nameSpan = document.createElement('span');
         nameSpan.classList.add('recording-name');
-        nameSpan.textContent = recording;
+        nameSpan.textContent = recording.audio_file;
 
-        const audio = document.createElement('audio');
-        audio.controls = true;
-        audio.src = `/recordings/${recording}`; // Added leading slash for absolute path
+        // Display transcript if available
+        if (recording.transcript_file) {
+            const transcriptLink = document.createElement('a');
+            transcriptLink.href = `/transcripts/${recording.transcript_file}`;
+            transcriptLink.textContent = 'View Transcript';
+            transcriptLink.target = '_blank';
+            li.appendChild(transcriptLink);
+        }
 
-        li.appendChild(nameSpan);
-        li.appendChild(audio);
+        // Display notes/summaries if available
+        if (recording.notes_file) {
+            const notesLink = document.createElement('a');
+            notesLink.href = `/notes/${recording.notes_file}`;
+            notesLink.textContent = 'View Summary';
+            notesLink.target = '_blank';
+            li.appendChild(notesLink);
+        }
+
         summariesList.appendChild(li);
     });
 }
+
