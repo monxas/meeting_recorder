@@ -14,7 +14,7 @@ load_dotenv()
 CHANNELS = 2  # Stereo recording
 RATE = 48000   # Sample rate matching the Aggregate Device
 OUTPUT_DIR = "recordings"
-COMBINED_INPUT_INDEX = 4  # Device ID for "Dispositivo agregado"
+COMBINED_INPUT_INDEX = 10  # Device ID for "Dispositivo agregado"
 
 def record_audio():
     if not os.path.exists(OUTPUT_DIR):
