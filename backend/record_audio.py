@@ -1,73 +1,84 @@
-# record_audio.py
+# backend/record_audio.py
 
 import sounddevice as sd
 import numpy as np
 import wave
 import os
 from datetime import datetime
-from dotenv import load_dotenv
-
-# Load environment variables (if needed)
-load_dotenv()
 
 # Configuration
-CHANNELS = 2  # Stereo recording
-RATE = 48000   # Sample rate matching the Aggregate Device
-OUTPUT_DIR = "recordings"
-COMBINED_INPUT_INDEX = 10  # Device ID for "Dispositivo agregado"
+RATE = 48000   # Sample rate
+OUTPUT_DIR = "../recordings"  # Adjusted path for backend integration
 
-def record_audio():
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
+class Recorder:
+    def __init__(self, device_index):
+        self.recording = False
+        self.frames = []
+        self.stream = None
+        self.device_index = device_index
+        self.channels = None
+        self.samplerate = None
+        self._initialize_device()
 
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    OUTPUT_FILE = os.path.join(OUTPUT_DIR, f"meeting_audio_{timestamp}.wav")
+    def _initialize_device(self):
+        try:
+            device_info = sd.query_devices(self.device_index, 'input')
+            self.channels = device_info['max_input_channels']
+            self.samplerate = int(device_info['default_samplerate'])
+            print(f"Initialized Recorder with device_id: {self.device_index}, channels: {self.channels}, samplerate: {self.samplerate}")
+        except Exception as e:
+            print(f"Error initializing device {self.device_index}: {e}")
+            raise ValueError(f"Invalid device index: {self.device_index}")
 
-    print("Recording... Press Ctrl+C to stop.")
+    def start(self):
+        if self.recording:
+            print("Recording is already in progress.")
+            return
+        self.recording = True
+        if not os.path.exists(OUTPUT_DIR):
+            os.makedirs(OUTPUT_DIR)
+        
+        print(f"Attempting to start recording with device_id: {self.device_index}, channels: {self.channels}")
+        
+        try:
+            self.stream = sd.InputStream(
+                samplerate=self.samplerate,
+                device=self.device_index,
+                channels=self.channels,
+                dtype='int16',
+                callback=self.callback
+            )
+            self.stream.start()
+            print("Recording started...")
+        except Exception as e:
+            print(f"Failed to start recording: {e}")
+            self.recording = False
+            raise e
 
-    # Initialize an empty list to store audio frames
-    frames = []
+    def callback(self, indata, frames_count, time_info, status):
+        if status:
+            print(f"Recording Warning: {status}")
+        self.frames.append(indata.copy())
 
-    try:
-        # Define a callback function to capture audio data
-        def callback(indata, frames_count, time_info, status):
-            if status:
-                print(f"Warning: {status}")
-            # Append a copy of the incoming data to the frames list
-            frames.append(indata.copy())
-
-        # Open an InputStream
-        with sd.InputStream(samplerate=RATE,
-                            device=COMBINED_INPUT_INDEX,
-                            channels=CHANNELS,
-                            dtype='int16',
-                            callback=callback):
-            while True:
-                # Keep the stream active until interrupted
-                sd.sleep(1000)
-    except KeyboardInterrupt:
-        print("\nRecording stopped by user.")
-    except Exception as e:
-        print(f"An error occurred during recording: {e}")
-        return
-
-    if not frames:
-        print("No audio data recorded.")
-        return
-
-    # Concatenate all recorded frames
-    recording = np.concatenate(frames, axis=0)
-
-    # Save the recording to a WAV file
-    try:
-        with wave.open(OUTPUT_FILE, 'wb') as wf:
-            wf.setnchannels(CHANNELS)
-            wf.setsampwidth(2)  # 2 bytes per sample for int16
-            wf.setframerate(RATE)
-            wf.writeframes(recording.tobytes())
-        print(f"Audio recorded and saved to {OUTPUT_FILE}")
-    except Exception as e:
-        print(f"Failed to save audio file: {e}")
-
-if __name__ == "__main__":
-    record_audio()
+    def stop(self):
+        if not self.recording:
+            print("No recording is in progress.")
+            return None
+        self.recording = False
+        self.stream.stop()
+        self.stream.close()
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = os.path.join(OUTPUT_DIR, f"meeting_audio_{timestamp}.wav")
+        try:
+            recording_data = np.concatenate(self.frames, axis=0)
+            with wave.open(output_file, 'wb') as wf:
+                wf.setnchannels(self.channels)
+                wf.setsampwidth(2)  # 2 bytes per sample for int16
+                wf.setframerate(self.samplerate)
+                wf.writeframes(recording_data.tobytes())
+            print(f"Recording saved to {output_file}")
+            self.frames = []
+            return output_file
+        except Exception as e:
+            print(f"Failed to save recording: {e}")
+            return None
