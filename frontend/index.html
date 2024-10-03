@@ -8,26 +8,28 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Meeting Recorder</h1>
-        </header>
-        <div class="main-content">
-            <div class="controls">
-                <label for="audioDevice">Select Audio Input:</label>
-                <select id="audioDevice">
-                    <option value="">Loading devices...</option>
-                </select>
-                <div class="buttons">
-                    <button id="toggleBtn">Start Recording</button>
-                </div>
-                <p id="status">Status: Idle</p>
-            </div>
-            <div class="summaries">
-                <h2>Meeting Summaries</h2>
-                <ul id="summariesList">
-                    <li>No recordings available.</li>
-                </ul>
+    <div class="top-bar">
+        <h1>Meeting Recorder</h1>
+        <div class="controls">
+            <label for="audioDevice">Select Audio Input:</label>
+            <select id="audioDevice">
+                <option value="">Loading devices...</option>
+            </select>
+            <button id="toggleBtn">Start Recording</button>
+            <span id="status">Status: Idle</span>
+        </div>
+    </div>
+    <div class="main-container">
+        <div class="summaries">
+            <h2>Meeting Summaries</h2>
+            <ul id="summariesList">
+                <li>No recordings available.</li>
+            </ul>
+        </div>
+        <div class="content-display">
+            <h2>Meeting Summary</h2>
+            <div id="summaryContent">
+                <p>Select a summary from the list to view its details.</p>
             </div>
         </div>
     </div>

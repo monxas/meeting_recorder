@@ -1,21 +1,29 @@
 # backend/app.py
 
-from fastapi import FastAPI, HTTPException, Body, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional
 import os
 from record_audio import Recorder
-from transcribe_audio import process_latest_audio
-from summarize_transcript import process_latest_transcript
 from pathlib import Path
+import whisper
+import openai
+from dotenv import load_dotenv
 
 app = FastAPI()
+
+# Load environment variables
+load_dotenv()
 
 # Configuration
 RECORDINGS_DIR = Path(__file__).resolve().parent.parent / "recordings"
 TRANSCRIPT_DIR = Path(__file__).resolve().parent.parent / "transcripts"
 NOTES_DIR = Path(__file__).resolve().parent.parent / "notes"
+
+# Ensure directories exist
+for directory in [RECORDINGS_DIR, TRANSCRIPT_DIR, NOTES_DIR]:
+    directory.mkdir(parents=True, exist_ok=True)
 
 # Initialize Recorder as None initially
 recorder = None
@@ -33,10 +41,48 @@ class AudioDevice(BaseModel):
 class DeviceSelection(BaseModel):
     device_id: int
 
-class RecordingInfo(BaseModel):
+class RecordingEntry(BaseModel):
     audio_file: str
     transcript_file: Optional[str] = None
     notes_file: Optional[str] = None
+
+# Initialize OpenAI API
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY is not set in the .env file.")
+openai.api_key = OPENAI_API_KEY
+
+# Function to transcribe audio using Whisper
+def transcribe_audio(file_path: Path) -> str:
+    model = whisper.load_model("base")  # Puedes elegir otros modelos como "small", "medium", "large"
+    print(f"Transcribing {file_path}...")
+    result = model.transcribe(str(file_path))
+    transcript = result["text"]
+    return transcript
+
+# Function to generate notes using OpenAI
+def generate_notes(transcript: str) -> str:
+    prompt = (
+        "You are a meeting assistant. Please summarize the following meeting transcript, highlight key points discussed, "
+        "list any decisions made, and clearly outline the actions to be taken. Also specify who is responsible for each action "
+        "and any deadlines. If any follow-up meetings are required, include that as well.\n\n"
+        f"{transcript}"
+    )
+    try:
+        # Chat completion request
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # Asegúrate de tener acceso a GPT-4
+            messages=[
+                {"role": "system", "content": "You are a helpful meeting assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=500,
+            temperature=0.5,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error generating notes: {e}")
+        return ""
 
 # API Endpoints
 
@@ -57,20 +103,38 @@ def start_recording(device: Optional[DeviceSelection] = Body(None)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/stop-recording", response_model=RecordingInfo)
-def stop_recording(background_tasks: BackgroundTasks):
+@app.post("/api/stop-recording", response_model=RecordingStatus)
+def stop_recording():
     global recorder
     try:
         if recorder and recorder.recording:
             output_file = recorder.stop()
             if output_file:
-                # Process transcription and summarization in the background
-                background_tasks.add_task(process_recording, output_file)
-                return RecordingInfo(audio_file=output_file)
+                # After saving the audio file, transcribe and generate notes
+                audio_path = Path(output_file)
+                transcript = transcribe_audio(audio_path)
+                transcript_filename = f"{audio_path.stem}_transcript.txt"
+                transcript_path = TRANSCRIPT_DIR / transcript_filename
+                with open(transcript_path, "w") as f:
+                    f.write(transcript)
+                print(f"Transcript saved to {transcript_path}")
+
+                # Generate notes/summaries
+                notes = generate_notes(transcript)
+                if notes:
+                    notes_filename = f"{audio_path.stem}_notes.txt"
+                    notes_path = NOTES_DIR / notes_filename
+                    with open(notes_path, "w") as f:
+                        f.write(notes)
+                    print(f"Notes saved to {notes_path}")
+                else:
+                    notes_path = None
+
+                return RecordingStatus(status="Recording stopped and processed")
             else:
-                raise HTTPException(status_code=500, detail="Failed to save recording.")
+                return RecordingStatus(status="Failed to save recording.")
         else:
-            raise HTTPException(status_code=400, detail="No recording was in progress.")
+            return RecordingStatus(status="No recording was in progress")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -82,22 +146,23 @@ def get_status():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/recordings", response_model=List[RecordingInfo])
+@app.get("/api/recordings", response_model=List[RecordingEntry])
 def list_recordings():
     try:
-        if not RECORDINGS_DIR.exists():
-            RECORDINGS_DIR.mkdir(parents=True)
-        recordings = sorted([f for f in RECORDINGS_DIR.iterdir() if f.suffix == '.wav'], key=lambda x: x.stat().st_mtime, reverse=True)
-        recording_infos = []
-        for recording in recordings:
-            transcript_file = TRANSCRIPT_DIR / f"{recording.stem}_transcript.txt"
-            notes_file = NOTES_DIR / f"{recording.stem}_notes.txt"
-            recording_infos.append(RecordingInfo(
-                audio_file=recording.name,
+        recordings = sorted(RECORDINGS_DIR.glob("meeting_audio_*.wav"), reverse=True)
+        recording_entries = []
+        for audio_file in recordings:
+            stem = audio_file.stem  # meeting_audio_YYYYMMDD_HHMMSS
+            transcript_file = TRANSCRIPT_DIR / f"{stem}_transcript.txt"
+            notes_file = NOTES_DIR / f"{stem}_transcript_notes.txt"
+
+            entry = RecordingEntry(
+                audio_file=audio_file.name,
                 transcript_file=transcript_file.name if transcript_file.exists() else None,
                 notes_file=notes_file.name if notes_file.exists() else None
-            ))
-        return recording_infos
+            )
+            recording_entries.append(entry)
+        return recording_entries
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -122,32 +187,12 @@ def get_audio_devices():
 # Mount the recordings directory to serve static audio files
 app.mount("/recordings", StaticFiles(directory=RECORDINGS_DIR), name="recordings")
 
-# Mount the transcripts directory to serve static transcript files
+# Mount the transcripts directory to serve transcript files
 app.mount("/transcripts", StaticFiles(directory=TRANSCRIPT_DIR), name="transcripts")
 
-# Mount the notes directory to serve static notes/summaries files
+# Mount the notes directory to serve summary files
 app.mount("/notes", StaticFiles(directory=NOTES_DIR), name="notes")
 
 # Mount the frontend directory to serve static files
 frontend_path = Path(__file__).resolve().parent.parent / "frontend"
 app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
-
-# Background task to process transcription and summarization
-def process_recording(audio_filename: str):
-    print(f"Processing transcription and summarization for {audio_filename}...")
-    audio_file_path = RECORDINGS_DIR / audio_filename
-    # Transcription
-    audio_name, transcript_name = process_latest_audio()
-    if transcript_name:
-        # Summarization
-        transcript_file_path = TRANSCRIPT_DIR / transcript_name
-        transcript = ""
-        with transcript_file_path.open("r") as f:
-            transcript = f.read()
-        notes = process_latest_transcript()
-        if notes:
-            print(f"Processing completed for {audio_filename}.")
-        else:
-            print(f"Summarization failed for {audio_filename}.")
-    else:
-        print(f"Transcription failed for {audio_filename}.")
