@@ -1,0 +1,19 @@
+{
+  "name": "meeting_recorder",
+  "version": "1.0.0",
+  "description": "A Python-based tool for macOS that captures system audio and microphone input during meetings from applications like Slack, Zoom, and Teams. It then transcribes the recorded audio and generates summarized notes using a Large Language Model (LLM) like OpenAI's GPT-4.",
+  "main": "main.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^32.1.2"
+  }
+}
