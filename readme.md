@@ -57,7 +57,6 @@ Whether you're a professional looking to keep accurate records of your meetings 
 ### Prerequisites
 
 - **Python 3.7+**
-- **Node.js and npm**
 - **Git**
 
 ### Clone the Repository
