@@ -1,392 +1,246 @@
-# Meeting Recorder Tool
+# Meeting Recorder
 
-A Python-based tool for macOS that captures system audio and microphone input during meetings from applications like Slack, Zoom, and Teams. It then transcribes the recorded audio and generates summarized notes using a Large Language Model (LLM) like OpenAI's GPT-4.
+![Meeting Recorder Banner](https://via.placeholder.com/800x200.png?text=Meeting+Recorder+Banner)
 
 ## Table of Contents
 
+- [Introduction](#introduction)
 - [Features](#features)
-- [Prerequisites](#prerequisites)
+- [Demo](#demo)
+- [Technologies Used](#technologies-used)
 - [Installation](#installation)
-  - [1. Clone the Repository](#1-clone-the-repository)
-  - [2. Install Homebrew](#2-install-homebrew)
-  - [3. Install Python](#3-install-python)
-  - [4. Set Up Virtual Audio Devices](#4-set-up-virtual-audio-devices)
-  - [5. Configure Aggregate Device](#5-configure-aggregate-device)
-  - [6. Set Up Python Environment](#6-set-up-python-environment)
-  - [7. Install Python Dependencies](#7-install-python-dependencies)
-  - [8. Configure Environment Variables](#8-configure-environment-variables)
 - [Usage](#usage)
-  - [1. List Audio Devices](#1-list-audio-devices)
-  - [2. Record Audio](#2-record-audio)
-  - [3. Transcribe Audio](#3-transcribe-audio)
-  - [4. Generate Notes](#4-generate-notes)
-  - [5. Automate the Workflow](#5-automate-the-workflow)
-- [Troubleshooting](#troubleshooting)
-- [Project Structure](#project-structure)
-- [Additional Tips](#additional-tips)
+- [API Endpoints](#api-endpoints)
+- [Contributing](#contributing)
 - [License](#license)
+- [Contact](#contact)
+
+## Introduction
+
+**Meeting Recorder** is a web-based application designed to streamline your meeting experience. It allows users to:
+
+- **Record Audio:** Capture high-quality audio from your meetings.
+- **Transcribe Meetings:** Automatically convert audio recordings into text.
+- **Generate Summaries:** Receive concise summaries of your meetings.
+- **Ask Questions:** Interactively ask questions about the meeting content and get detailed answers powered by OpenAI's GPT-4.
+
+Whether you're a professional looking to keep accurate records of your meetings or a student aiming to capture lecture notes, Meeting Recorder simplifies the process, saving you time and enhancing productivity.
 
 ## Features
 
-- **System Audio Capture**: Records audio from applications like Slack, Zoom, and Teams.
-- **Microphone Input**: Simultaneously records your voice through the microphone.
-- **Transcription**: Converts recorded audio into text using OpenAI's Whisper.
-- **Note Generation**: Summarizes the transcript into concise meeting notes using GPT-4.
-- **Automation**: Streamlines the entire process with a master workflow script.
+- **Audio Recording:** Select from available audio input devices and start/stop recordings with ease.
+- **Automatic Transcription:** Convert your audio recordings into text using advanced speech-to-text algorithms.
+- **Meeting Summaries:** Generate clear and concise summaries of your meetings for quick reference.
+- **Interactive Q&A:** Ask specific questions about your meeting transcripts and receive detailed answers powered by GPT-4.
+- **Device Selection:** Choose your preferred audio input device from a list of available options.
+- **User-Friendly Interface:** Intuitive design ensures a seamless experience for users of all technical levels.
+- **Responsive Design:** Access and use the application on various devices, including desktops, tablets, and smartphones.
 
-## Prerequisites
+## Demo
 
-- **macOS**: Tested on macOS Catalina and later.
-- **Python**: Version 3.7 or higher.
-- **Homebrew**: macOS package manager.
-- **Virtual Audio Driver**: [BlackHole](https://github.com/ExistentialAudio/BlackHole) (free and open-source) or [Loopback](https://rogueamoeba.com/loopback/) (paid).
+![Meeting Recorder Demo](https://via.placeholder.com/800x400.png?text=Meeting+Recorder+Demo)
+
+*Screenshot showcasing the Meeting Recorder interface, including the recording controls, summaries list, and Q&A section.*
+
+## Technologies Used
+
+- **Frontend:**
+  - HTML5
+  - CSS3
+  - JavaScript (ES6)
+  - [Marked.js](https://marked.js.org/) for Markdown rendering
+  - [Font Awesome](https://fontawesome.com/) for icons
+
+- **Backend:**
+  - Python 3.x
+  - [FastAPI](https://fastapi.tiangolo.com/) for building the API
+  - [OpenAI](https://openai.com/) for generating summaries and answering questions
+  - [SpeechRecognition](https://pypi.org/project/SpeechRecognition/) for audio transcription
+  - [PyAudio](https://people.csail.mit.edu/hubert/pyaudio/) for handling audio streams
+
+- **Other:**
+  - [npm](https://www.npmjs.com/) for package management
 
 ## Installation
 
-### 1. Clone the Repository
+### Prerequisites
 
-First, clone this repository to your local machine:
+- **Python 3.7+**
+- **Node.js and npm**
+- **Git**
+
+### Clone the Repository
 
 ```bash
 git clone https://github.com/yourusername/meeting-recorder.git
 cd meeting-recorder
 ```
 
-> **Note**: Replace `yourusername` with your actual GitHub username if applicable.
+### Setup the Backend
 
-### 2. Install Homebrew
+1. **Create a Virtual Environment**
 
-If you don't have Homebrew installed, install it using the following command:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate
+   ```
 
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
+2. **Install Backend Dependencies**
 
-For more details, visit the [Homebrew website](https://brew.sh/).
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### 3. Install Python
+3. **Configure Environment Variables**
 
-Ensure you have Python 3.7 or higher installed. You can install Python via Homebrew:
+   Create a `.env` file in the root directory and add your OpenAI API key:
 
-```bash
-brew install python
-```
+   ```env
+   OPENAI_API_KEY=your_openai_api_key_here
+   ```
 
-Verify the installation:
+4. **Run the Backend Server**
 
-```bash
-python3 --version
-```
+   ```bash
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+   ```
 
-### 4. Set Up Virtual Audio Devices
-
-macOS doesn't allow direct system audio capture due to privacy and security restrictions. To work around this, set up a virtual audio device using **BlackHole**.
-
-#### a. Install BlackHole
-
-```bash
-brew install blackhole-2ch
-```
-
-#### b. Create a Multi-Output Device
-
-1. Open **Audio MIDI Setup**:
-   - Navigate to **Applications > Utilities > Audio MIDI Setup**.
-
-2. Create a **Multi-Output Device**:
-   - Click the **"+"** button at the bottom-left corner and select **"Create Multi-Output Device"**.
-
-3. Configure the Multi-Output Device:
-   - Check the boxes for:
-     - **Built-in Output** (or your preferred speakers/headphones)
-     - **BlackHole 2ch**
-
-4. (Optional) Rename the Multi-Output Device:
-   - Double-click the name and rename it to **"Combined Output"** for clarity.
-
-#### c. Create an Aggregate Device
-
-1. In **Audio MIDI Setup**, click the **"+"** button and select **"Create Aggregate Device"**.
-
-2. Configure the Aggregate Device:
-   - Check the boxes for:
-     - **BlackHole 2ch**
-     - **Micrófono de “iPhone 16 Pro”** and/or **Micrófono del MacBook Air**
-
-3. Enable **"Drift Correction"** for the microphone to prevent audio sync issues.
-
-4. (Optional) Rename the Aggregate Device to **"Dispositivo agregado"**.
-
-#### d. Set System Preferences to Use the Created Devices
-
-1. **Set Multi-Output Device as Default Output**:
-   - Go to **System Preferences > Sound > Output**.
-   - Select **"Combined Output"**.
-
-2. **Configure Applications to Use Combined Input**:
-   - In applications like Zoom, Slack, or Teams, set the audio input to **"Dispositivo agregado"**.
-
-### 5. Configure Aggregate Device
-
-Ensure that your Aggregate Device (`Dispositivo agregado`) includes both **BlackHole 2ch** and your **microphone**. All included devices should have the same sample rate (48000 Hz).
-
-### 6. Set Up Python Environment
-
-It's recommended to use a virtual environment to manage dependencies.
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 7. Install Python Dependencies
-
-Install the required Python libraries:
-
-```bash
-pip install -r requirements.txt
-```
-
-Alternatively, install them manually:
-
-```bash
-pip install sounddevice numpy openai python-dotenv git+https://github.com/openai/whisper.git tqdm pyaudio
-```
-
-> **Note**: If you encounter issues installing `pyaudio`, install PortAudio via Homebrew first:
-
-```bash
-brew install portaudio
-pip install pyaudio
-```
-
-### 8. Configure Environment Variables
-
-Create a `.env` file in the project root to store your OpenAI API key securely.
-
-```bash
-touch .env
-```
-
-Add your OpenAI API key to the `.env` file:
-
-```env
-OPENAI_API_KEY=your_openai_api_key_here
-```
-
-> **Important**: Replace `your_openai_api_key_here` with your actual OpenAI API key.
-
-Ensure that `.env` is excluded from version control by verifying it's listed in `.gitignore`.
 
 ## Usage
 
-### 1. List Audio Devices
+1. **Access the Application**
 
-Before recording, list all available audio input devices to verify configurations.
+   Open your web browser and navigate to `http://localhost:8000`.
 
-```bash
-python list_audio_devices.py
-```
+2. **Select an Audio Input Device**
 
-**Sample Output:**
+   - Use the dropdown menu to select your preferred audio input device.
+   - If no devices are listed, ensure your microphone is connected and recognized by your system.
 
-```
-Available audio input devices:
-0: Micrófono de “iPhone 16 Pro” - Channels: 1, Sample Rate: 48000.0
-1: BlackHole 2ch - Channels: 2, Sample Rate: 48000.0
-2: Micrófono del MacBook Air - Channels: 1, Sample Rate: 48000.0
-4: Dispositivo agregado - Channels: 3, Sample Rate: 48000.0
-```
+3. **Start Recording**
 
-### 2. Record Audio
+   - Click the "Start Recording" button to begin capturing audio.
+   - The status indicator will show "Recording...".
 
-Use the `record_audio.py` script to start recording.
+4. **Stop Recording**
 
-```bash
-python record_audio.py
-```
+   - Click the "Stop Recording" button to end the recording session.
+   - The application will automatically transcribe the audio and generate a summary.
 
-**Script Behavior:**
+5. **View Meeting Summaries**
 
-- Attempts to record with 3 channels at 48000 Hz using **Dispositivo agregado** (Device ID: 4).
-- If it encounters an error, it retries with fewer channels.
-- Press `Ctrl+C` to stop recording.
+   - Navigate to the "Meeting Summaries" section to view a list of your recorded meetings.
+   - Click "View Summary" to see the detailed summary of a specific meeting.
 
-**Successful Output:**
+6. **Ask Questions**
 
-```
-Using device 'Dispositivo agregado' (ID: 4)
-Device supports up to 3 channel(s) at 48000 Hz
-Attempting to record with 3 channel(s) at 48000 Hz
-Recording... Press Ctrl+C to stop.
-^C
-Recording stopped by user.
-Successfully recorded with 2 channel(s) at 48000 Hz
-Audio recorded and saved to recordings/meeting_audio_20241003_123456.wav
-```
+   - In the "Ask a Question" section, type your question related to the selected meeting summary.
+   - Click the "Ask" button to receive an answer generated by GPT-4.
 
-### 3. Transcribe Audio
+## API Endpoints
 
-Transcribe the recorded audio using OpenAI's Whisper.
+### 1. Start Recording
 
-#### Option A: Using Local Whisper
+- **Endpoint:** `/api/start-recording`
+- **Method:** `POST`
+- **Description:** Initiates audio recording using the specified audio input device.
+- **Request Body:**
 
-```bash
-python transcribe_audio.py
-```
+  ```json
+  {
+    "device_id": 1
+  }
+  ```
 
-#### Option B: Using Whisper API
+- **Response:**
 
-```bash
-python transcribe_audio_api.py
-```
+  ```json
+  {
+    "status": "Recording started"
+  }
+  ```
 
-> **Note**: Choose either Option A or Option B based on your preference and resources.
+### 2. Stop Recording
 
-### 4. Generate Notes
+- **Endpoint:** `/api/stop-recording`
+- **Method:** `POST`
+- **Description:** Stops the ongoing audio recording and processes the audio file.
+- **Response:**
 
-Generate summarized notes from the transcript using GPT-4.
+  ```json
+  {
+    "status": "Recording stopped and processed"
+  }
+  ```
 
-```bash
-python generate_notes.py
-```
+### 3. Get Status
 
-### 5. Automate the Workflow
+- **Endpoint:** `/api/status`
+- **Method:** `GET`
+- **Description:** Retrieves the current recording status.
+- **Response:**
 
-Use the `workflow.py` script to automate recording, transcription, and note generation.
+  ```json
+  {
+    "status": "Recording"
+  }
+  ```
 
-```bash
-python workflow.py
-```
+### 4. List Recordings
 
-**Workflow Behavior:**
+- **Endpoint:** `/api/recordings`
+- **Method:** `GET`
+- **Description:** Retrieves a list of all recordings with associated transcripts and summaries.
+- **Response:**
 
-1. Starts recording audio. Speak and engage in your meeting.
-2. Press `Ctrl+C` to stop recording.
-3. Automatically transcribes the audio.
-4. Generates summarized notes.
-5. Saves all outputs in respective directories.
+  ```json
+  [
+    {
+      "audio_file": "meeting_audio_20241005_190431.wav",
+      "transcript_file": "meeting_audio_20241005_190431_transcript.txt",
+      "notes_file": "meeting_audio_20241005_190431_notes.txt"
+    },
+    ...
+  ]
+  ```
 
-## Troubleshooting
+### 5. Get Audio Devices
 
-### Common Issues
+- **Endpoint:** `/api/audio-devices`
+- **Method:** `GET`
+- **Description:** Retrieves a list of available audio input devices.
+- **Response:**
 
-1. **Invalid Number of Channels Error**
+  ```json
+  [
+    {
+      "id": 1,
+      "name": "Microphone (Realtek High Definition Audio)",
+      "channels": 2,
+      "sample_rate": 44100
+    },
+    ...
+  ]
+  ```
 
-   - **Solution**: Ensure that the `CHANNELS` parameter in `record_audio.py` matches a supported configuration (e.g., 2 channels at 48000 Hz).
-   
-2. **No Audio Captured**
+### 6. Ask Question
 
-   - **Solution**:
-     - Verify that the Aggregate Device is correctly set up in **Audio MIDI Setup**.
-     - Ensure that the recording script uses the correct device index.
-     - Check microphone and system audio levels.
+- **Endpoint:** `/api/ask-question`
+- **Method:** `POST`
+- **Description:** Sends a question related to a specific meeting summary and receives an answer generated by GPT-4.
+- **Request Body:**
 
-3. **Permission Issues**
+  ```json
+  {
+    "notes_file": "meeting_audio_20241005_190431_notes.txt",
+    "question": "What was the main action item discussed?"
+  }
+  ```
 
-   - **Solution**:
-     - Go to **System Preferences > Security & Privacy > Privacy > Microphone**.
-     - Ensure that **Terminal** or your Python IDE is checked.
+- **Response:**
 
-4. **PyAudio Installation Errors**
-
-   - **Solution**:
-     - Install PortAudio via Homebrew:
-       
-       ```bash
-       brew install portaudio
-       pip install pyaudio
-       ```
-
-5. **API Errors During Transcription or Note Generation**
-
-   - **Solution**:
-     - Ensure your OpenAI API key is correctly set in the `.env` file.
-     - Verify internet connectivity.
-     - Check OpenAI service status.
-
-### Additional Tips
-
-- **Test with QuickTime Player**: Before using the Python scripts, test audio capture with QuickTime Player to ensure that both system audio and microphone input are being captured correctly.
-  
-- **Monitor Audio Levels**: Use **Audio MIDI Setup** to balance audio levels between system audio and microphone input.
-
-## Project Structure
-
-```
-meeting-recorder/
-├── .env
-├── generate_notes.py
-├── list_audio_devices.py
-├── record_audio.py
-├── record_audio_pyaudio.py
-├── transcribe_audio.py
-├── transcribe_audio_api.py
-├── workflow.py
-├── requirements.txt
-├── README.md
-├── .gitignore
-├── recordings/
-│   └── meeting_audio_YYYYMMDD_HHMMSS.wav
-├── transcripts/
-│   └── meeting_audio_YYYYMMDD_HHMMSS_transcript.txt
-└── notes/
-    └── meeting_audio_YYYYMMDD_HHMMSS_notes.txt
-```
-
-- **`.env`**: Stores environment variables like API keys.
-- **`generate_notes.py`**: Generates summarized notes from transcripts.
-- **`list_audio_devices.py`**: Lists available audio input devices.
-- **`record_audio.py`**: Records audio using `sounddevice`.
-- **`record_audio_pyaudio.py`**: Alternative recording script using `PyAudio`.
-- **`transcribe_audio.py` / `transcribe_audio_api.py`**: Transcribes recorded audio.
-- **`workflow.py`**: Automates the recording, transcription, and note generation process.
-- **`requirements.txt`**: Lists Python dependencies.
-- **`README.md`**: This documentation file.
-- **`.gitignore`**: Specifies files and directories to be ignored by Git.
-- **`recordings/`**: Stores recorded audio files.
-- **`transcripts/`**: Stores transcribed text files.
-- **`notes/`**: Stores generated meeting notes.
-
-## Additional Tips
-
-1. **Virtual Environment Management**
-
-   - Always activate your virtual environment before running scripts:
-     
-     ```bash
-     source venv/bin/activate
-     ```
-
-2. **Updating Dependencies**
-
-   - Keep your dependencies up-to-date:
-     
-     ```bash
-     pip install --upgrade -r requirements.txt
-     ```
-
-3. **Securing API Keys**
-
-   - Never commit your `.env` file or API keys to version control.
-   - Use tools like GitHub Secrets or environment variables for CI/CD pipelines.
-
-4. **Enhancing the User Interface**
-
-   - Consider developing a simple GUI using frameworks like **Tkinter**, **PyQt**, or **Electron.js** for a more user-friendly experience.
-
-5. **Scheduling Recordings**
-
-   - For automated recordings at specific times, explore using `cron` jobs or macOS's `launchd`.
-
-6. **Monitoring and Logging**
-
-   - Implement logging in your scripts to monitor the application's behavior and troubleshoot issues more effectively.
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-**Disclaimer**: This tool captures system audio and microphone input. Ensure you have the necessary permissions to record meetings and that you comply with all relevant privacy laws and regulations.
+  ```json
+  {
+    "answer": "The main action item discussed was to implement a new project management tool by the end of Q2."
+  }
+  ```
