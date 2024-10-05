@@ -1,12 +1,9 @@
 # Meeting Recorder
 
-![Meeting Recorder Banner](https://via.placeholder.com/800x200.png?text=Meeting+Recorder+Banner)
-
 ## Table of Contents
 
 - [Introduction](#introduction)
 - [Features](#features)
-- [Demo](#demo)
 - [Technologies Used](#technologies-used)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -35,12 +32,6 @@ Whether you're a professional looking to keep accurate records of your meetings 
 - **Device Selection:** Choose your preferred audio input device from a list of available options.
 - **User-Friendly Interface:** Intuitive design ensures a seamless experience for users of all technical levels.
 - **Responsive Design:** Access and use the application on various devices, including desktops, tablets, and smartphones.
-
-## Demo
-
-![Meeting Recorder Demo](https://via.placeholder.com/800x400.png?text=Meeting+Recorder+Demo)
-
-*Screenshot showcasing the Meeting Recorder interface, including the recording controls, summaries list, and Q&A section.*
 
 ## Technologies Used
 
