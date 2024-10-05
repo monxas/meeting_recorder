@@ -8,13 +8,15 @@ import os
 from record_audio import Recorder
 from pathlib import Path
 import whisper
-import openai
+from openai import OpenAI
+
 from dotenv import load_dotenv
 
 app = FastAPI()
 
 # Load environment variables
 load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Configuration
 RECORDINGS_DIR = Path(__file__).resolve().parent.parent / "recordings"
@@ -50,7 +52,6 @@ class RecordingEntry(BaseModel):
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is not set in the .env file.")
-openai.api_key = OPENAI_API_KEY
 
 # Function to transcribe audio using Whisper
 def transcribe_audio(file_path: Path) -> str:
@@ -70,15 +71,13 @@ def generate_notes(transcript: str) -> str:
     )
     try:
         # Chat completion request
-        response = openai.ChatCompletion.create(
-            model="gpt-4",  # Asegúrate de tener acceso a GPT-4
-            messages=[
-                {"role": "system", "content": "You are a helpful meeting assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=500,
-            temperature=0.5,
-        )
+        response = client.chat.completions.create(model="gpt-4",  # Asegúrate de tener acceso a GPT-4
+        messages=[
+            {"role": "system", "content": "You are a helpful meeting assistant."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=500,
+        temperature=0.5)
         return response.choices[0].message.content.strip()
     except Exception as e:
         print(f"Error generating notes: {e}")
@@ -154,7 +153,7 @@ def list_recordings():
         for audio_file in recordings:
             stem = audio_file.stem  # meeting_audio_YYYYMMDD_HHMMSS
             transcript_file = TRANSCRIPT_DIR / f"{stem}_transcript.txt"
-            notes_file = NOTES_DIR / f"{stem}_transcript_notes.txt"
+            notes_file = NOTES_DIR / f"{stem}_notes.txt"
 
             entry = RecordingEntry(
                 audio_file=audio_file.name,

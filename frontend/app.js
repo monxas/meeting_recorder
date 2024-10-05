@@ -224,12 +224,10 @@ function fetchRecordings() {
 
 // Populate the recordings list with summaries
 function populateRecordings(recordings) {
-    console.log('Populating recordings list...');
     // Clear existing list
     summariesList.innerHTML = '';
 
     if (recordings.length === 0) {
-        console.warn('No recordings available.');
         const li = document.createElement('li');
         li.textContent = 'No recordings available.';
         summariesList.appendChild(li);
@@ -242,21 +240,24 @@ function populateRecordings(recordings) {
     });
 
     recordings.forEach(recording => {
-        console.log('Adding recording to list:', recording);
         const li = document.createElement('li');
-        li.dataset.audioFile = recording.audio_file;
-        li.dataset.transcriptFile = recording.transcript_file;
-        li.dataset.notesFile = recording.notes_file;
 
+        // Format the file name to display a readable date
+        const timestamp = recording.audio_file.match(/meeting_audio_(\d{8}_\d{6})\.wav/)[1];
+        const friendlyDate = `${timestamp.slice(0, 4)}-${timestamp.slice(4, 6)}-${timestamp.slice(6, 8)} at ${timestamp.slice(9, 11)}:${timestamp.slice(11, 13)}`;
+console.log('Friendly date:', friendlyDate);
         const nameSpan = document.createElement('span');
         nameSpan.classList.add('recording-name');
-        nameSpan.textContent = recording.audio_file;
+        nameSpan.textContent = `Meeting on ${friendlyDate}`;
 
-        // Display summary if available
+        li.appendChild(nameSpan);
+
+        // Display notes/summaries if available
         if (recording.notes_file) {
             const summaryLink = document.createElement('a');
             summaryLink.href = '#';
             summaryLink.textContent = 'View Summary';
+            summaryLink.classList.add('summary-link');
             summaryLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 console.log('Viewing summary for:', recording.notes_file);
@@ -273,8 +274,8 @@ function populateRecordings(recordings) {
 
         summariesList.appendChild(li);
     });
-    console.log('Recordings list populated.');
 }
+
 
 // Function to extract timestamp from filename
 function getTimestamp(filename) {

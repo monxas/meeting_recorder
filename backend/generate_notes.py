@@ -17,7 +17,6 @@ if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is not set in the environment variables.")
 
 # Set OpenAI API key
-openai.api_key = OPENAI_API_KEY
 
 def generate_notes(transcript):
     prompt = (

@@ -17,13 +17,12 @@ if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is not set in the environment variables.")
 
 # Set OpenAI API key
-openai.api_key = OPENAI_API_KEY
 
 def generate_notes(transcript):
     prompt = (
         "You are a meeting assistant. Please summarize the following meeting transcript, highlight key points discussed, "
         "list any decisions made, and clearly outline the actions to be taken. Also specify who is responsible for each action "
-        "and any deadlines. If any follow-up meetings are required, include that as well.\n\n"
+        "and any deadlines. If any follow-up meetings are required, include that as well. Format the summary in markdown \n\n"
         f"{transcript}"
     )
     try:
