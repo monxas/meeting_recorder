@@ -7,11 +7,15 @@ const API_BASE_URL = '/api'; // Same origin
 const audioDeviceSelect = document.getElementById('audioDevice');
 const toggleBtn = document.getElementById('toggleBtn');
 const statusDisplay = document.getElementById('status');
-summariesList = document.getElementById('summariesList');
+const summariesList = document.getElementById('summariesList');
 const summaryContent = document.getElementById('summaryContent');
+const questionInput = document.getElementById('questionInput');
+const askBtn = document.getElementById('askBtn');
+const answerContent = document.getElementById('answerContent');
 
-// State Variable
+// State Variables
 let isRecording = false;
+let currentNotesFile = ''; // To track the current notes file
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
@@ -24,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // setInterval(updateStatus, 5000);
 });
 
-// Fetch available audio devices from the back-end and populate the dropdown
+// Fetch available audio devices from the backend and populate the dropdown
 function fetchAudioDevices() {
     console.log('Fetching audio devices...');
     fetch(`${API_BASE_URL}/audio-devices`)
@@ -70,10 +74,11 @@ function populateAudioDevices(devices) {
     console.log('Audio devices populated.');
 }
 
-// Set up event listeners for the toggle button
+// Set up event listeners for the toggle and ask buttons
 function setupEventListeners() {
     console.log('Setting up event listeners...');
     toggleBtn.addEventListener('click', toggleRecording);
+    askBtn.addEventListener('click', askQuestion);
     console.log('Event listeners set up.');
 }
 
@@ -181,7 +186,7 @@ function stopRecording() {
         });
 }
 
-// Update the status display by fetching from the back-end
+// Update the status display by fetching from the backend
 function updateStatus() {
     console.log('Updating status...');
     fetch(`${API_BASE_URL}/status`)
@@ -207,7 +212,7 @@ function updateStatus() {
         });
 }
 
-// Fetch recordings from the back-end and display them
+// Fetch recordings from the backend and display them
 function fetchRecordings() {
     console.log('Fetching recordings...');
     fetch(`${API_BASE_URL}/recordings`)
@@ -243,28 +248,27 @@ function populateRecordings(recordings) {
         const li = document.createElement('li');
 
         // Format the file name to display a readable date
-        const timestamp = recording.audio_file.match(/meeting_audio_(\d{8}_\d{6})\.wav/)[1];
-        const friendlyDate = `${timestamp.slice(0, 4)}-${timestamp.slice(4, 6)}-${timestamp.slice(6, 8)} at ${timestamp.slice(9, 11)}:${timestamp.slice(11, 13)}`;
-console.log('Friendly date:', friendlyDate);
+        const timestampMatch = recording.audio_file.match(/meeting_audio_(\d{8}_\d{6})\.wav/);
+        const timestamp = timestampMatch ? timestampMatch[1] : '';
+        const friendlyDate = formatTimestamp(timestamp);
+        console.log('Friendly date:', friendlyDate);
+
         const nameSpan = document.createElement('span');
         nameSpan.classList.add('recording-name');
         nameSpan.textContent = `Meeting on ${friendlyDate}`;
 
-        li.appendChild(nameSpan);
-
-        // Display notes/summaries if available
         if (recording.notes_file) {
-            const summaryLink = document.createElement('a');
-            summaryLink.href = '#';
-            summaryLink.textContent = 'View Summary';
-            summaryLink.classList.add('summary-link');
-            summaryLink.addEventListener('click', (e) => {
-                e.preventDefault();
+            const summaryButton = document.createElement('button');
+            summaryButton.textContent = 'View Summary';
+            summaryButton.className = 'summary-button';
+            summaryButton.dataset.notesFile = recording.notes_file; // Store notes_file in data attribute
+            summaryButton.addEventListener('click', () => {
                 console.log('Viewing summary for:', recording.notes_file);
                 displaySummary(recording.notes_file);
+                setActiveSummary(summaryButton, recording.notes_file);
             });
             li.appendChild(nameSpan);
-            li.appendChild(summaryLink);
+            li.appendChild(summaryButton);
         } else {
             li.appendChild(nameSpan);
             const noSummary = document.createElement('span');
@@ -276,8 +280,17 @@ console.log('Friendly date:', friendlyDate);
     });
 }
 
+// Function to extract and format timestamp from filename
+function formatTimestamp(timestamp) {
+    if (!timestamp) return 'Unknown Time';
+    const year = timestamp.slice(0, 4);
+    const month = timestamp.slice(4, 6);
+    const day = timestamp.slice(6, 8);
+    const hour = timestamp.slice(9, 11);
+    const minute = timestamp.slice(11, 13);
+    return `${year}-${month}-${day} at ${hour}:${minute}`;
+}
 
-// Function to extract timestamp from filename
 function getTimestamp(filename) {
     console.log('Extracting timestamp from filename:', filename);
     const match = filename.match(/meeting_audio_(\d{8}_\d{6})\.wav/);
@@ -306,11 +319,91 @@ function displaySummary(notesFile) {
             console.log('Summary fetched successfully for notes file:', notesFile);
             const htmlContent = marked.parse(text);
             summaryContent.innerHTML = `<div>${htmlContent}</div>`;
+            // Clear previous answers
+            answerContent.innerHTML = '';
+            // Clear question input
+            questionInput.value = '';
         })
         .catch(error => {
             console.error('Error fetching summary:', error);
             summaryContent.innerHTML = '<p>Failed to load summary.</p>';
         });
+}
+
+// Function to set the active summary button and update currentNotesFile
+function setActiveSummary(activeButton, notesFile) {
+    // Remove the 'active' class from all buttons
+    const allButtons = summariesList.querySelectorAll('.summary-button');
+    allButtons.forEach(button => {
+        button.classList.remove('active');
+    });
+    // Add the 'active' class to the clicked button
+    activeButton.classList.add('active');
+    // Update the currentNotesFile
+    currentNotesFile = notesFile;
+    console.log('Current notes file set to:', currentNotesFile);
+}
+
+// Function to ask a question based on the summary
+function askQuestion() {
+    const question = questionInput.value.trim();
+    if (!question) {
+        alert('Please enter a question before submitting.');
+        return;
+    }
+
+    if (!currentNotesFile) {
+        alert('No summary is currently selected. Please select a summary to ask questions about.');
+        return;
+    }
+
+    // Create the request body
+    const requestBody = {
+        notes_file: currentNotesFile,
+        question: question
+    };
+
+    // Send the question to the backend
+    console.log('Sending question to backend:', requestBody);
+    askBtn.disabled = true;
+    askBtn.textContent = 'Asking...';
+
+    fetch(`${API_BASE_URL}/ask-question`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+    })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errorData => {
+                    throw new Error(errorData.detail || 'Failed to get an answer.');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Answer received:', data);
+            displayAnswer(data.answer);
+        })
+        .catch(error => {
+            console.error('Error asking question:', error);
+            alert(`Error: ${error.message}`);
+        })
+        .finally(() => {
+            askBtn.disabled = false;
+            askBtn.textContent = 'Ask';
+        });
+}
+
+// Function to display the answer in the UI
+function displayAnswer(answer) {
+    console.log('Displaying answer:', answer);
+    answerContent.innerHTML = `
+        <h3>Answer</h3>
+        <p>${escapeHtml(answer)}</p>
+    `;
 }
 
 // Utility function to escape HTML to prevent XSS

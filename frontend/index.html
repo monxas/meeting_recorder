@@ -6,8 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meeting Recorder</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" async></script>
+    <!-- Include Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Include Marked.js for rendering Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
 </head>
 <body>
     <div class="top-bar">
@@ -32,6 +34,15 @@
             <h2>Meeting Summary</h2>
             <div id="summaryContent">
                 <p>Select a summary from the list to view its details.</p>
+            </div>
+            <!-- New section for asking questions -->
+            <div class="question-section">
+                <h3>Ask a Question</h3>
+                <textarea id="questionInput" placeholder="Type your question here..."></textarea>
+                <button id="askBtn">Ask</button>
+                <div id="answerContent">
+                    <!-- The answer will be displayed here -->
+                </div>
             </div>
         </div>
     </div>

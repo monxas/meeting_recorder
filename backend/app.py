@@ -1,5 +1,3 @@
-# backend/app.py
-
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -48,6 +46,13 @@ class RecordingEntry(BaseModel):
     transcript_file: Optional[str] = None
     notes_file: Optional[str] = None
 
+class QuestionRequest(BaseModel):
+    notes_file: str
+    question: str
+
+class QuestionResponse(BaseModel):
+    answer: str
+
 # Initialize OpenAI API
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
@@ -71,7 +76,7 @@ def generate_notes(transcript: str) -> str:
     )
     try:
         # Chat completion request
-        response = client.chat.completions.create(model="gpt-4",  # Asegúrate de tener acceso a GPT-4
+        response = client.chat.completions.create(model="gpt-4o-mini",  
         messages=[
             {"role": "system", "content": "You are a helpful meeting assistant."},
             {"role": "user", "content": prompt}
@@ -82,6 +87,28 @@ def generate_notes(transcript: str) -> str:
     except Exception as e:
         print(f"Error generating notes: {e}")
         return ""
+
+# Function to answer questions based on transcript
+def answer_question(transcript: str, question: str) -> str:
+    prompt = (
+        "You are an assistant that provides detailed answers based on the following meeting transcript.\n\n"
+        f"Transcript:\n{transcript}\n\n"
+        f"Question: {question}\n"
+        "Answer:"
+    )
+    try:
+        response = client.chat.completions.create(model="gpt-4o-mini",  
+            messages=[
+                {"role": "system", "content": "You are a knowledgeable assistant that answers questions based on meeting transcripts."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=500,
+            temperature=0.5
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error answering question: {e}")
+        return "Lo siento, no pude procesar tu pregunta en este momento."
 
 # API Endpoints
 
@@ -180,6 +207,24 @@ def get_audio_devices():
                     sample_rate=device['default_samplerate']
                 ))
         return input_devices
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/ask-question", response_model=QuestionResponse)
+def ask_question(request: QuestionRequest):
+    try:
+        notes_path = NOTES_DIR / request.notes_file
+        if not notes_path.exists():
+            raise HTTPException(status_code=404, detail="Notes file not found.")
+        
+        with open(notes_path, "r") as f:
+            notes_content = f.read()
+        
+        answer = answer_question(notes_content, request.question)
+        
+        return QuestionResponse(answer=answer)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
